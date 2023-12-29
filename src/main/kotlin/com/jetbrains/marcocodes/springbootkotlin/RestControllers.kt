@@ -13,33 +13,36 @@ import org.springframework.web.server.ResponseStatusException
 
 @RestController
 @RequestMapping("/api/v1/articles")
-class ArticleController {
-
-    val articles = mutableListOf(Article("My Title", "my content"))
+class ArticleController(val articleRepository : ArticleRepository) {
 
     @GetMapping
-    fun articles() = articles
+    fun articles() = articleRepository.findAllByOrderByCreatedAtDesc()
 
     @GetMapping("/{slug}")
     fun article(@PathVariable slug: String) =
-            articles.find { article -> article.slug == slug } ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
+            articleRepository.findBySlug(slug).orElseThrow { throw ResponseStatusException(HttpStatus.NOT_FOUND) }
 
     @PostMapping
     fun newArticle(@RequestBody article: Article): Article {
-        articles.add(article)
+        article.id = null
+        articleRepository.save(article)
         return article
     }
 
     @PutMapping("/{slug}")
     fun updateArticle(@RequestBody article: Article, @PathVariable slug: String): Article {
-        val existingArticle = articles.find { it.slug == slug } ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
+        val existingArticle =
+                articleRepository.findBySlug(slug).orElseThrow { throw ResponseStatusException(HttpStatus.NOT_FOUND) }
         existingArticle.content = article.content
+        articleRepository.save(existingArticle)
         return article
     }
 
     @DeleteMapping("/{slug}")
     fun removeArticle(@PathVariable slug: String) {
-        articles.removeIf { article -> article.slug == slug }
+        val existingArticle =
+                articleRepository.findBySlug(slug).orElseThrow { throw ResponseStatusException(HttpStatus.NOT_FOUND) }
+        articleRepository.delete(existingArticle)
     }
 
 }
